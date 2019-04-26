@@ -6,26 +6,49 @@
 // Ringstellung = ring offset between inner and outter ring of the rotor
 // Grundstellung = initial position
 
+const ENIGMA_ALPHABET = "abcdefghijklmnopqrstuvwxyz";
+const ENIGMA_REFLECTOR_SETTINGS = {	
+	"B":	{ "wiring": "yruhqsldpxngokmiebfzcwvjat" },
+	"C":	{ "wiring": "fvpjiaoyedrzxwgctkuqsbnmhl" }
+};
+const ENIGMA_ROTOR_SETTINGS = {	
+	"I":	{ "wiring": "ekmflgdqvzntowyhxuspaibrcj", "notch": "r" },
+	"II":	{ "wiring": "ajdksiruxblhwtmcqgznpyfvoe", "notch": "f" },
+	"III":	{ "wiring": "bdfhjlcprtxvznyeiwgakmusqo", "notch": "w" },
+	"IV":	{ "wiring": "esovpzjayquirhxlnftgkdcmwb", "notch": "k" },
+	"V":	{ "wiring": "vzbrgityupsdnhlxawmjqofeck", "notch": "a" },
+	"VI":	{ "wiring": "jpgvoumfyqbenhzrdkasxlictw", "notch": "an" },
+	"VII":	{ "wiring": "nzjhgrcxmyswboufaivlpekqdt", "notch": "an" },
+	"VIII":	{ "wiring": "fkqhtlxocbjspdzramewniuygv", "notch": "an" } 
+};
+const ENIGMA_DEFAULT_SETTINGS = {
+	"plugboard":	{ "wiring": "abcdefghijklmnopqrstuvwxyz" },
+	"rotor_right":	{ "type": "III", "offset": "a", "position": "a" },
+	"rotor_middle":	{ "type": "II", "offset": "a", "position": "a" },
+	"rotor_left":	{ "type": "I", "offset": "a", "position": "a" },
+	"reflector":	{ "type": "B" }
+};
+
+
 class Rotor {
 
-	static forward() { return true; }
-	static backward() { return false; }
-
-    constructor(wiring, notch, offset, base) {
+    constructor(wiring, notch, offset, position) {
 
 		this.type = "";
 		this.alphabet = "abcdefghijklmnopqrstuvwxyz";
 		this.wiring = wiring;
-		this.position = 0;
-		this.offset = 0;
+		this.position = this.alphabet.indexOf(position);
+		this.offset = this.alphabet.indexOf(offset);
 		this.notch = notch;
 
 		this.forward = [];
 		let wiring_index = 0;
 		let wiring_count = this.wiring.length;
 		while(wiring_index < wiring_count) {
-			let wire = this.wiring[wiring_index];
-			this.forward.push(this.alphabet.indexOf(wire));
+			let offset_wiring1 = (wiring_index - this.offset + 26) % 26;
+			let wire = this.wiring[offset_wiring1];
+			let offset_wiring2 = (this.alphabet.indexOf(wire) + this.offset) % 26;
+			this.forward.push(offset_wiring2);
 			wiring_index++;
 		}
 
@@ -33,8 +56,10 @@ class Rotor {
 		wiring_index = 0;
 		wiring_count = this.wiring.length;
 		while(wiring_index < wiring_count) {
-			let wire = this.alphabet[wiring_index];
-			this.backward.push(this.wiring.indexOf(wire));
+			let offset_wiring1 = (wiring_index - this.offset + 26) % 26;
+			let wire = this.alphabet[offset_wiring1];
+			let offset_wiring2 = (this.wiring.indexOf(wire) + this.offset) % 26;
+			this.backward.push(offset_wiring2);
 			wiring_index++;
 		}
     }
@@ -50,14 +75,17 @@ class Rotor {
 		return hit_notch;
 	}
 
-    feed(letter, direction=Rotor.forward) { 
+    feed(letter, direction) { 
 
 		// calculate relative position
 		let absolute_position = this.alphabet.indexOf(letter);
 		let relative_position = (absolute_position + this.position) % 26;
 		
-		let relative_wired_position = this.forward[relative_position];
-		if(direction === Rotor.backward) {
+		let relative_wired_position;
+		if(direction === "fwd") {
+			relative_wired_position = this.forward[relative_position];
+		}
+		else if(direction === "bwd") {
 			relative_wired_position = this.backward[relative_position];
 		}
 
@@ -111,59 +139,31 @@ class Plugboard {
 };
 
 
-class Static_Rotor {
-
-	// constructor() {}
-	feed(letter) { return letter; }
-};
-
-
-const ENIGMA_ALPHABET = "abcdefghijklmnopqrstuvwxyz";
-const ENIGMA_REFLECTOR_SETTINGS = {	
-	"B":	{ "wiring": "yruhqsldpxngokmiebfzcwvjat" },
-	"C":	{ "wiring": "fvpjiaoyedrzxwgctkuqsbnmhl" }
-};
-const ENIGMA_ROTOR_SETTINGS = {	
-	"I":	{ "wiring": "ekmflgdqvzntowyhxuspaibrcj", "notch": "r" },
-	"II":	{ "wiring": "ajdksiruxblhwtmcqgznpyfvoe", "notch": "f" },
-	"III":	{ "wiring": "bdfhjlcprtxvznyeiwgakmusqo", "notch": "w" },
-	"IV":	{ "wiring": "esovpzjayquirhxlnftgkdcmwb", "notch": "k" },
-	"V":	{ "wiring": "vzbrgityupsdnhlxawmjqofeck", "notch": "a" },
-	"VI":	{ "wiring": "jpgvoumfyqbenhzrdkasxlictw", "notch": "an" },
-	"VII":	{ "wiring": "nzjhgrcxmyswboufaivlpekqdt", "notch": "an" },
-	"VIII":	{ "wiring": "fkqhtlxocbjspdzramewniuygv", "notch": "an" } 
-};
-const ENIGMA_DEFAULT_SETTINGS = {
-	"plugboard":	{ "wiring": "abcdefghijklmnopqrstuvwxyz" },
-	"rotor_right":	{ "type": "III", "offset": "0", "base": "0" },
-	"rotor_middle":	{ "type": "II", "offset": "0", "base": "0" },
-	"rotor_left":	{ "type": "I", "offset": "0", "base": "0" },
-	"reflector":	{ "type": "B" }
-};
-
 class Enigma {
 
-	constructor() {
+	constructor(settings=null) {
 
-		let plugboard_wiring = ENIGMA_DEFAULT_SETTINGS.plugboard.wiring;
+		if(settings === null) {
+			settings = ENIGMA_DEFAULT_SETTINGS;
+		}
+
+		let plugboard_wiring = settings.plugboard.wiring;
 		this.plugboard = new Plugboard(ENIGMA_ALPHABET, plugboard_wiring);
 
-		this.static_rotor = new Static_Rotor();
-
 		this.rotors = [];
-		let rotor_type = ENIGMA_DEFAULT_SETTINGS.rotor_right.type;
+		let rotor_type = settings.rotor_right.type;
 		let rotor_settings = ENIGMA_ROTOR_SETTINGS[rotor_type];
-		this.rotors.push(new Rotor(rotor_settings.wiring, rotor_settings.notch, ENIGMA_DEFAULT_SETTINGS.rotor_right.offset, ENIGMA_DEFAULT_SETTINGS.rotor_right.base));
+		this.rotors.push(new Rotor(rotor_settings.wiring, rotor_settings.notch, settings.rotor_right.offset, settings.rotor_right.position));
 
-		rotor_type = ENIGMA_DEFAULT_SETTINGS.rotor_middle.type;
+		rotor_type = settings.rotor_middle.type;
 		rotor_settings = ENIGMA_ROTOR_SETTINGS[rotor_type];
-		this.rotors.push(new Rotor(rotor_settings.wiring, rotor_settings.notch, ENIGMA_DEFAULT_SETTINGS.rotor_middle.offset, ENIGMA_DEFAULT_SETTINGS.rotor_middle.base));
+		this.rotors.push(new Rotor(rotor_settings.wiring, rotor_settings.notch, settings.rotor_middle.offset, settings.rotor_middle.position));
 
-		rotor_type = ENIGMA_DEFAULT_SETTINGS.rotor_left.type;
+		rotor_type = settings.rotor_left.type;
 		rotor_settings = ENIGMA_ROTOR_SETTINGS[rotor_type];
-		this.rotors.push(new Rotor(rotor_settings.wiring, rotor_settings.notch, ENIGMA_DEFAULT_SETTINGS.rotor_left.offset, ENIGMA_DEFAULT_SETTINGS.rotor_left.base));
+		this.rotors.push(new Rotor(rotor_settings.wiring, rotor_settings.notch, settings.rotor_left.offset, settings.rotor_left.position));
 
-		let reflector_type = ENIGMA_DEFAULT_SETTINGS.reflector.type;
+		let reflector_type = settings.reflector.type;
 		let reflector_wiring = ENIGMA_REFLECTOR_SETTINGS[reflector_type].wiring;
 		this.reflector = new Reflector(ENIGMA_ALPHABET, reflector_wiring);
 	}
@@ -171,28 +171,37 @@ class Enigma {
 	process(letter) {
 	
 		let debug = `${letter}`;
+		
+		// deals with special case of the middle rotor double step
+		let middle_rotor = this.rotors[1];
+		if(ENIGMA_ALPHABET[middle_rotor.position + 1] === middle_rotor.notch) {
+			this.rotors[1].rotate();
+			this.rotors[2].rotate();
+		}
 
 		// rotate right rotors, rotate following rotors if true i.e. hit notch
 		let rotor_index = 0;
 		let rotor_count = this.rotors.length;
 		let rotate = true
 		while(rotor_index < rotor_count && rotate === true) {
-
-			rotate = this.rotors[rotor_index].rotate()
+			
+			rotate = this.rotors[rotor_index].rotate();
 			rotor_index++;
 		}
+
 		
 		letter = this.plugboard.feed(letter);
 		debug += ` pb ${letter}`;
 		
-		letter = this.static_rotor.feed(letter);
-		debug += ` sr ${letter}`;
+		// On the enigma machine there is a static rotor between the plugboard and the right rotor
+		// it doesnt do any scrambling, I've left it out for simplicity
 
+		// feed data through the rotor forward i.e. right to left
 		rotor_index = 0;
 		rotor_count = this.rotors.length;
 		while(rotor_index < rotor_count) {
 
-			letter = this.rotors[rotor_index].feed(letter, Rotor.forward)
+			letter = this.rotors[rotor_index].feed(letter, "fwd");
 			debug += ` r${rotor_index} ${letter}`;
 			rotor_index++;
 		}
@@ -200,28 +209,26 @@ class Enigma {
 		letter = this.reflector.feed(letter);
 		debug += ` rf ${letter}`;
 
+		// feed data through the rotor backward i.e. left to right
 		rotor_index = 0;
 		rotor_count = this.rotors.length;
 		while(rotor_index < rotor_count) {
 
-			letter = this.rotors[rotor_index].feed(letter, Rotor.backward)
+			letter = this.rotors[rotor_count - rotor_index - 1].feed(letter, "bwd");
 			debug += ` r${rotor_index} ${letter}`;
 			rotor_index++;
 		}
 		
-		letter = this.static_rotor.feed(letter);
-		debug += ` sr ${letter}`;
-		
 		letter = this.plugboard.feed(letter);
 		debug += ` pb ${letter}`;
 		
+		debug += ` | ${ENIGMA_ALPHABET[this.rotors[2].position]} ${ENIGMA_ALPHABET[this.rotors[1].position]} ${ENIGMA_ALPHABET[this.rotors[0].position]}`;
 		console.log(debug);
 		return letter;
 	}
 }
 
-let machine = new Enigma();
 
-let message = "aaaaaaaaaaaaaaaaaaaaaaaaaa";
-let cypher = message.split("").map((letter)=>{ return machine.process(letter); });
-console.log(cypher.join(""));
+if(typeof(module.exports) !== "undefined") {
+	module.exports = { Enigma };
+}
