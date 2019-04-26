@@ -1,16 +1,21 @@
+/**
+ * @author Jane Smith <jsmith@example.com>
+ */
+
 "use strict";
 
 // Enigma type 3
 // Umkehrwalze = reflector type B or C
-// Walzenlage = wheels x 3
 // Ringstellung = ring offset between inner and outter ring of the rotor
 // Grundstellung = initial position
 
-const ENIGMA_ALPHABET = "abcdefghijklmnopqrstuvwxyz";
+/** @constant {number} */
 const ENIGMA_REFLECTOR_SETTINGS = {	
 	"B":	{ "wiring": "yruhqsldpxngokmiebfzcwvjat" },
 	"C":	{ "wiring": "fvpjiaoyedrzxwgctkuqsbnmhl" }
 };
+
+/** @constant {number} */
 const ENIGMA_ROTOR_SETTINGS = {	
 	"I":	{ "wiring": "ekmflgdqvzntowyhxuspaibrcj", "notch": "r" },
 	"II":	{ "wiring": "ajdksiruxblhwtmcqgznpyfvoe", "notch": "f" },
@@ -21,6 +26,8 @@ const ENIGMA_ROTOR_SETTINGS = {
 	"VII":	{ "wiring": "nzjhgrcxmyswboufaivlpekqdt", "notch": "an" },
 	"VIII":	{ "wiring": "fkqhtlxocbjspdzramewniuygv", "notch": "an" } 
 };
+
+/** @constant {number} */
 const ENIGMA_DEFAULT_SETTINGS = {
 	"plugboard":	{ "wiring": "abcdefghijklmnopqrstuvwxyz" },
 	"rotor_right":	{ "type": "III", "offset": "a", "position": "a" },
@@ -30,47 +37,63 @@ const ENIGMA_DEFAULT_SETTINGS = {
 };
 
 
+/** Class representing a point. */
 class Rotor {
 
-    constructor(wiring, notch, offset, position) {
+	/**
+     * Create a point.
+     * @param {number} x - The x value.
+     * @param {number} y - The y value.
+     */
+    constructor(alphabet, type, offset, position) {
 
-		this.type = "";
-		this.alphabet = "abcdefghijklmnopqrstuvwxyz";
-		this.wiring = wiring;
-		this.position = this.alphabet.indexOf(position);
-		this.offset = this.alphabet.indexOf(offset);
-		this.notch = notch;
+		this.alphabet = alphabet;
 
 		this.forward = [];
+		this.forward.fill(0, 0, this.alphabet.length - 1);
+
+		this.backward = [];
+		this.backward.fill(0, 0, this.alphabet.length - 1);
+
+		this.setup(type, offset, position);
+    }
+
+	setup(type, offset, position) {
+
+		this.type = type;
+		this.wiring = ENIGMA_ROTOR_SETTINGS[type].wiring;
+		this.notch = ENIGMA_ROTOR_SETTINGS[type].notch;
+		this.offset = this.alphabet.indexOf(offset);
+		this.position = this.alphabet.indexOf(position);
+
 		let wiring_index = 0;
 		let wiring_count = this.wiring.length;
 		while(wiring_index < wiring_count) {
 			let offset_wiring1 = (wiring_index - this.offset + 26) % 26;
 			let wire = this.wiring[offset_wiring1];
 			let offset_wiring2 = (this.alphabet.indexOf(wire) + this.offset) % 26;
-			this.forward.push(offset_wiring2);
+			this.forward[wiring_index] = offset_wiring2;
 			wiring_index++;
 		}
 
-		this.backward = [];
 		wiring_index = 0;
 		wiring_count = this.wiring.length;
 		while(wiring_index < wiring_count) {
 			let offset_wiring1 = (wiring_index - this.offset + 26) % 26;
 			let wire = this.alphabet[offset_wiring1];
 			let offset_wiring2 = (this.wiring.indexOf(wire) + this.offset) % 26;
-			this.backward.push(offset_wiring2);
+			this.backward[wiring_index] = offset_wiring2;
 			wiring_index++;
 		}
-    }
+	}
 
 	rotate() {
 
 		this.position++;
 		if(this.position > 25) this.position = 0;
 
-		let notch_position = this.alphabet.indexOf(this.notch);
-		let hit_notch = (this.position === notch_position);
+		let letter = this.alphabet[this.position];
+		let hit_notch = this.notch.includes(letter);
 
 		return hit_notch;
 	}
@@ -98,7 +121,9 @@ class Rotor {
 };
 
 
-class Reflector {
+// This class is used for the plugboard and the reflector
+// although phisically different their function is identical
+class Mapping {
 
 	constructor(alphabet, wiring) {
 
@@ -106,29 +131,9 @@ class Reflector {
 		this.wiring = wiring;
 	}
 
-	feed(letter) { 
+	setup(wiring) {
 
-		let index = this.alphabet.indexOf(letter);
-		return this.wiring[index];
-	}
-};
-
-
-class Plugboard {
-
-	constructor(alphabet, wiring) {
-
-		this.alphabet = alphabet;
 		this.wiring = wiring;
-	}
-
-	wire(letter1, letter2) {
-
-		let index1 = this.alphabet.indexOf(letter1);
-		let index2 = this.alphabet.indexOf(letter2);
-
-		this.wiring[index1] = letter2;
-		this.wiring[index2] = letter1;
 	}
 
 	feed(letter) { 
@@ -141,31 +146,37 @@ class Plugboard {
 
 class Enigma {
 
-	constructor(settings=null) {
+	constructor(alphabet, settings=null, debug=false) {
 
 		if(settings === null) {
 			settings = ENIGMA_DEFAULT_SETTINGS;
 		}
 
-		let plugboard_wiring = settings.plugboard.wiring;
-		this.plugboard = new Plugboard(ENIGMA_ALPHABET, plugboard_wiring);
+		this.alphabet = alphabet;
+
+		this.plugboard = new Mapping(this.alphabet, settings.plugboard.wiring);
 
 		this.rotors = [];
-		let rotor_type = settings.rotor_right.type;
-		let rotor_settings = ENIGMA_ROTOR_SETTINGS[rotor_type];
-		this.rotors.push(new Rotor(rotor_settings.wiring, rotor_settings.notch, settings.rotor_right.offset, settings.rotor_right.position));
+		this.rotors.push(new Rotor(this.alphabet, settings.rotor_right.type, settings.rotor_right.offset, settings.rotor_right.position));
+		this.rotors.push(new Rotor(this.alphabet, settings.rotor_middle.type, settings.rotor_middle.offset, settings.rotor_middle.position));
+		this.rotors.push(new Rotor(this.alphabet, settings.rotor_left.type, settings.rotor_left.offset, settings.rotor_left.position));
 
-		rotor_type = settings.rotor_middle.type;
-		rotor_settings = ENIGMA_ROTOR_SETTINGS[rotor_type];
-		this.rotors.push(new Rotor(rotor_settings.wiring, rotor_settings.notch, settings.rotor_middle.offset, settings.rotor_middle.position));
+		let reflector_wiring = ENIGMA_REFLECTOR_SETTINGS[settings.reflector.type].wiring;
+		this.reflector = new Mapping(this.alphabet, reflector_wiring);
 
-		rotor_type = settings.rotor_left.type;
-		rotor_settings = ENIGMA_ROTOR_SETTINGS[rotor_type];
-		this.rotors.push(new Rotor(rotor_settings.wiring, rotor_settings.notch, settings.rotor_left.offset, settings.rotor_left.position));
+		this.debug = debug;
+	}
 
-		let reflector_type = settings.reflector.type;
-		let reflector_wiring = ENIGMA_REFLECTOR_SETTINGS[reflector_type].wiring;
-		this.reflector = new Reflector(ENIGMA_ALPHABET, reflector_wiring);
+	setup(settings) {
+
+		this.plugboard.setup(settings.plugboard.wiring);
+
+		this.rotors[0].setup(settings.rotor_right.type, settings.rotor_right.offset, settings.rotor_right.position);
+		this.rotors[1].setup(settings.rotor_middle.type, settings.rotor_middle.offset, settings.rotor_middle.position);
+		this.rotors[2].setup(settings.rotor_left.type, settings.rotor_left.offset, settings.rotor_left.position);
+
+		let reflector_wiring = ENIGMA_REFLECTOR_SETTINGS[settings.reflector.type].wiring;
+		this.reflector.setup(reflector_wiring);
 	}
 
 	process(letter) {
@@ -174,7 +185,7 @@ class Enigma {
 		
 		// deals with special case of the middle rotor double step
 		let middle_rotor = this.rotors[1];
-		if(ENIGMA_ALPHABET[middle_rotor.position + 1] === middle_rotor.notch) {
+		if(middle_rotor.notch.includes(this.alphabet[middle_rotor.position + 1]) === true) {
 			this.rotors[1].rotate();
 			this.rotors[2].rotate();
 		}
@@ -222,8 +233,9 @@ class Enigma {
 		letter = this.plugboard.feed(letter);
 		debug += ` pb ${letter}`;
 		
-		debug += ` | ${ENIGMA_ALPHABET[this.rotors[2].position]} ${ENIGMA_ALPHABET[this.rotors[1].position]} ${ENIGMA_ALPHABET[this.rotors[0].position]}`;
-		console.log(debug);
+		debug += ` | ${this.alphabet[this.rotors[2].position]} ${this.alphabet[this.rotors[1].position]} ${this.alphabet[this.rotors[0].position]}`;
+		if(this.debug === true)	console.log(debug);
+
 		return letter;
 	}
 }

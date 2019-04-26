@@ -1,67 +1,121 @@
-let enigma = null;
+// Tests done against GCHQ implementation, see
+// https://github.com/gchq/CyberChef/wiki/Enigma,-the-Bombe,-and-Typex
+// https://gchq.github.io/CyberChef/#recipe=Enigma('3-rotor','','','','BDFHJLCPRTXVZNYEIWGAKMUSQO%3CW','C','O','NZJHGRCXMYSWBOUFAIVLPEKQDT%3CAN','G','I','FKQHTLXOCBJSPDZRAMEWNIUYGV%3CAN','N','D','AF%20BV%20CP%20DJ%20EI%20GO%20HY%20KR%20LZ%20MX%20NW%20TQ%20SU','AH%20CO%20DE%20GZ%20IJ%20KM%20LQ%20NY%20PS%20TW',false)&input=aW50aGV5ZWFyaXRvb2tteWRlZ3JlZW9mZG9jdG9yb2ZtZWRpY2luZW9mdGhldW5pdmVyc2l0eW9mbG9uZG9uYW5kcHJvY2VlZGVkdG9uZXRsZXl0b2dvdGhyb3VnaHRoZWNvdXI
 
-if(typeof(require) !== "undefined") {
-	enigma = require("./enigma.js");
-}
+"use strict";
 
+let enigma = require("./enigma.js");
 
-// test default settings
-function test_minimal() {
-
-	let machine = new enigma.Enigma();
-	let message = "a";
-	let cypher = message.split("").map((letter)=>{ return machine.process(letter); });
-}
-
-// test ???
-function test_1() {
-
-	const settings = {
-		"plugboard":	{ "wiring": "abcdefwhijtlmnopqrskuvgxyz" },
-		"rotor_right":	{ "type": "III", "offset": "a", "position": "a" },
-		"rotor_middle":	{ "type": "II", "offset": "a", "position": "a" },
-		"rotor_left":	{ "type": "I", "offset": "a", "position": "a" },
-		"reflector":	{ "type": "B" }
-	};
-
-	let machine = new enigma.Enigma(settings);
-	let result = machine.process("t");
-
-	if(result === "g") {
-		console.log("Success!");
+const TESTS = [{
+		"settings": {
+			"plugboard":	{ "wiring": "abcdefghijklmnopqrstuvwxyz" },
+			"rotor_right":	{ "type": "III", "offset": "a", "position": "a" },
+			"rotor_middle":	{ "type": "II", "offset": "a", "position": "a" },
+			"rotor_left":	{ "type": "I", "offset": "a", "position": "a" },
+			"reflector":	{ "type": "B" }
+		},
+		"input": "intheyearitookmydegreeofdoctorofmedicineoftheuniversityoflondonandproceededtonetleytogothroughthecour",
+		"output": "hqhkrbkxdumhpjaqaztvyphxvvugjmgsuxgrdcetjopnvmepyvalfwebngtxxsrtxohlarzofqeokdmxwbiknhrcgyrvayuyqpwip",
+		"description": "This is the default settings test."
+	},
+	{
+		"settings": {
+			"plugboard":	{ "wiring": "abcdefghijklmnopqrstuvwxyz" },
+			"rotor_right":	{ "type": "VI", "offset": "a", "position": "a" },
+			"rotor_middle":	{ "type": "V", "offset": "a", "position": "a" },
+			"rotor_left":	{ "type": "IV", "offset": "a", "position": "a" },
+			"reflector":	{ "type": "B" }
+		},
+		"input": "intheyearitookmydegreeofdoctorofmedicineoftheuniversityoflondonandproceededtonetleytogothroughthecour",
+		"output": "nqgfbmwcugbgtbgwtopydvmpudaaglbhfakrjhvbcjjiwksgdokidxcvpukyxbadjmvvhymirucwuahynkvlnvtvemxgjmbmxfvsy",
+		"description": "Rotors IV, V, VI tests."
+	},
+	{
+		"settings": {
+			"plugboard":	{ "wiring": "abcdefghijklmnopqrstuvwxyz" },
+			"rotor_right":	{ "type": "VIII", "offset": "a", "position": "a" },
+			"rotor_middle":	{ "type": "VII", "offset": "a", "position": "a" },
+			"rotor_left":	{ "type": "I", "offset": "a", "position": "a" },
+			"reflector":	{ "type": "C" }
+		},
+		"input": "intheyearitookmydegreeofdoctorofmedicineoftheuniversityoflondonandproceededtonetleytogothroughthecour",
+		"output": "fzeevkqrbwfaccyrklctaaivftduzgyhiaafeuddtxbxlclgrhoreemdkdvdjwevpvgxzwcifgzjmjforxcdubjyxxljcyufcschs",
+		"description": "Rotors VII, VIII tests."
+	},
+	{
+		"settings": {
+			"plugboard":	{ "wiring": "hboedfzajimqkycslrpwuvtxng" },	// plugboard AH CO DE GZ IJ KM LQ NY PS TW
+			"rotor_right":	{ "type": "III", "offset": "a", "position": "a" },
+			"rotor_middle":	{ "type": "II", "offset": "a", "position": "a" },
+			"rotor_left":	{ "type": "I", "offset": "a", "position": "a" },
+			"reflector":	{ "type": "B" }
+		},
+		"input": "intheyearitookmydegreeofdoctorofmedicineoftheuniversityoflondonandproceededtonetleytogothroughthecour",
+		"output": "pknzjdfvetomlrldwkfvfctxoktehkrpbkgpvpviscejkkbznghbywaeyptfkgvfowqqbhkjmzeperhsujtkbehggnfvctkesmgjs",
+		"description": "Plugboard test."
+	},
+	{
+		"settings": {
+			"plugboard":	{ "wiring": "abcdefghijklmnopqrstuvwxyz" },
+			"rotor_right":	{ "type": "III", "offset": "n", "position": "a" },
+			"rotor_middle":	{ "type": "II", "offset": "g", "position": "a" },
+			"rotor_left":	{ "type": "I", "offset": "c", "position": "a" },
+			"reflector":	{ "type": "B" }
+		},
+		"input": "intheyearitookmydegreeofdoctorofmedicineoftheuniversityoflondonandproceededtonetleytogothroughthecour",
+		"output": "fhazfmubprsuuvqzennsvpluwqbwsitqkwevskionsjgdzznlvskwjevtanryjlffksgyrgfbwhhsmlukqicklyxgilykdykanxqj",
+		"description": "Offsets test."
+	},
+	{
+		"settings": {
+			"plugboard":	{ "wiring": "abcdefghijklmnopqrstuvwxyz" },
+			"rotor_right":	{ "type": "III", "offset": "a", "position": "n" },
+			"rotor_middle":	{ "type": "II", "offset": "a", "position": "g" },
+			"rotor_left":	{ "type": "I", "offset": "a", "position": "c" },
+			"reflector":	{ "type": "B" }
+		},
+		"input": "intheyearitookmydegreeofdoctorofmedicineoftheuniversityoflondonandproceededtonetleytogothroughthecour",
+		"output": "qicyjlslcdacxwznizdnybjiiwollabxvvrbztgnrogliqvwnbcwhrsflavxrprctksmcoilifhcmioyijhfzmvpliqaoizfrhezu",
+		"description": "Positions test."
+	},
+	{
+		"settings": {
+			"plugboard":	{ "wiring": "hboedfzajimqkycslrpwuvtxng" },
+			"rotor_right":	{ "type": "VIII", "offset": "n", "position": "d" },
+			"rotor_middle":	{ "type": "VII", "offset": "g", "position": "i" },
+			"rotor_left":	{ "type": "III", "offset": "c", "position": "o" },
+			"reflector":	{ "type": "C" }
+		},
+		"input": "intheyearitookmydegreeofdoctorofmedicineoftheuniversityoflondonandproceededtonetleytogothroughthecour",
+		"output": "krqdcobticmkcrrnabvlhskxxwlwrpqadncglpofclkkkgjojypohpqehbavnwbqkrtdkfyojczietbvmrefkdgzjkvqxqvpadydv",
+		"description": "All together test."
 	}
-	else {
+];
+
+
+function Run_Tests(tests) {
+	
+	let machine = new enigma.Enigma("abcdefghijklmnopqrstuvwxyz");
+	
+	let tests_index = 0;
+	let tests_count = tests.length;
+	while(tests_index < tests_count) {
+		
+		let test = tests[tests_index];
+		machine.setup(test.settings);
+		let output = Array.from(test.input).map((letter)=>{ return machine.process(letter); }).join("");
+		let result = "";
+		if(output === test.output) {
+			result = "Success => ";
+		}
+		else {
+			result = "Failure => ";
+		}
+		result += test.description;
 		console.log(result);
-		console.log("Failed!");
+		tests_index++;
 	}
 }
 
-// test ???
-function test_2(plaintext, cypher) {
 
-	const settings = {
-		"plugboard":	{ "wiring": "abcdefghijklmnopqrstuvwxyz" },
-		"rotor_right":	{ "type": "III", "offset": "v", "position": "a" },
-		"rotor_middle":	{ "type": "II", "offset": "e", "position": "a" },
-		"rotor_left":	{ "type": "I", "offset": "q", "position": "a" },
-		"reflector":	{ "type": "B" }
-	};
-
-	let machine = new enigma.Enigma(settings);
-	let message = plaintext;
-	let result = message.split("").map((letter)=>{ return machine.process(letter); }).join("");
-	console.log(message);
-	console.log(result);
-	// let result = plaintext.split("").map((letter)=>{ return machine.process(letter); }).join("");
-}
-
-const plaintext =  "intheyearitookmydegreeofdoctorofmedicineoftheuniversityoflondonandproceededtonetleytogothroughthecour";
-const cypher = "";
-
-
-if(enigma !== null) {
-
-	// test_minimal();
-	// test_1(plaintext, cypher);
-	test_2(plaintext, cypher);
-}
+Run_Tests(TESTS);
