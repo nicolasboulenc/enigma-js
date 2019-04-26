@@ -1,6 +1,8 @@
-# enigma
+# Enigma
 
 Simple and easy to follow implementation of an Enigma M3 machine.
+Tested against GCHQ implementation.
+
 
 ## Example
 

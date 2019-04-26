@@ -1,6 +1,6 @@
 "use strict";
 
-let enigma = require("./enigma.js");
+let enigmajs = require("./enigma.js");
 
 const settings = {
 	"plugboard":	{ "wiring": "abcdefghijklmnopqrstuvwxyz" },
@@ -10,7 +10,7 @@ const settings = {
 	"reflector":	{ "type": "B" } };
 
 // creates a new machine with alphabet
-let machine = new enigma.Enigma("abcdefghijklmnopqrstuvwxyz");
+let machine = new enigmajs.Enigma("abcdefghijklmnopqrstuvwxyz");
 
 // display plaintext message
 let message = "helloworld";

@@ -4,7 +4,7 @@
 
 "use strict";
 
-let enigma = require("./enigma.js");
+let enigmajs = require("./enigma.js");
 
 const TESTS = [{
 		"settings": {
@@ -95,7 +95,7 @@ const TESTS = [{
 
 function Run_Tests(tests) {
 	
-	let machine = new enigma.Enigma("abcdefghijklmnopqrstuvwxyz");
+	let machine = new enigmajs.Enigma("abcdefghijklmnopqrstuvwxyz");
 	
 	let tests_index = 0;
 	let tests_count = tests.length;

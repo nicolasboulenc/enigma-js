@@ -1,7 +1,5 @@
 "use strict";
 
-// Enigma type 3
-
 const ENIGMA_REFLECTOR_SETTINGS = {	
 	"B":	{ "wiring": "yruhqsldpxngokmiebfzcwvjat" },
 	"C":	{ "wiring": "fvpjiaoyedrzxwgctkuqsbnmhl" }
@@ -188,7 +186,6 @@ class Enigma {
 			rotor_index++;
 		}
 
-		
 		letter = this.plugboard.feed(letter);
 		debug += ` pb ${letter}`;
 		
